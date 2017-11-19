@@ -1,5 +1,6 @@
-" toggle_words.vim
-" Author: Vincent Wang (linsong dot qizi at gmail dot com)
+" motiontoggle.vim
+" Author: Vincent Wang (linsong dot qizi at gmail dot com) & Updated by Zack
+" Frost
 " Created:  Fri Jun 29 18:06:29 CST 2007
 " Requires: Vim Ver7.0+ 
 " Version:  1.5
@@ -23,7 +24,7 @@
 "   This script can search the candicate words to toggle based on
 "   current filetype, for example, you can put the following configuration
 "   into your .vimrc to define some words for python:
-"      let g:toggle_words_dict = {'python': [['if', 'elif', 'else']]}
+"      let g:motion_toggle_words = {'python': [['if', 'elif', 'else']]}
 "   
 "   There are some default words for toggling predefined in the
 "   script(g:_toogle_words_dict) that will work for all filetypes.
@@ -62,16 +63,16 @@ if v:version < 700
     finish 
 endif
 
-if exists("g:load_toggle_words")
+if exists("g:load_motiontoggle")
    finish
 endif
 
 let s:keepcpo= &cpo
 set cpo&vim
 
-let g:load_toggle_words = "1.5"
+let g:load_motiontoggle = "1.5"
 
-let g:_toggle_words_dict = {'*': [
+let g:_motion_toggle_words = {'*': [
     \ ['==', '!='], 
     \ ['>', '<'], 
     \ ['(', ')'], 
@@ -100,24 +101,39 @@ let g:_toggle_words_dict = {'*': [
     \ [],
     \ ],  }
 
-if exists('g:toggle_words_dict')
-    for key in keys(g:toggle_words_dict)
-        if has_key(g:_toggle_words_dict, key)
-            call extend(g:_toggle_words_dict[key], g:toggle_words_dict[key])
+if exists('g:motion_toggle_words')
+    for key in keys(g:motion_toggle_words)
+        if has_key(g:_motion_toggle_words, key)
+            call extend(g:_motion_toggle_words[key], g:motion_toggle_words[key])
         else
-            let g:_toggle_words_dict[key] = g:toggle_words_dict[key]
+            let g:_motion_toggle_words[key] = g:motion_toggle_words[key]
         endif
     endfor
 endif
 
-function! s:ToggleWord()
+function! ToggleMotion(type)
     let cur_filetype = &filetype
-    if ! has_key(g:_toggle_words_dict, cur_filetype)
-        let words_candicates_array = g:_toggle_words_dict['*']
+    if ! has_key(g:_motion_toggle_words, cur_filetype)
+        let words_candicates_array = g:_motion_toggle_words['*']
     else
-        let words_candicates_array = g:_toggle_words_dict[cur_filetype] + g:_toggle_words_dict['*']
+        let words_candicates_array = g:_motion_toggle_words[cur_filetype] + g:_motion_toggle_words['*']
     endif
-    let cur_word = expand("<cword>")
+    let cur_word = ""
+	let last_reg = @@
+	if a:type==# 'v'
+		" Characterwise visual mode
+		execute "normal! `<v`>y"
+		let cur_word = @@
+	elseif a:type ==# 'char'
+		" Normal mode
+		execute "normal! `[v`]y"
+		let cur_word = @@
+	else
+		" Linewise or blockwise mode	
+		return
+	endif
+	let @@ = last_reg
+
     let word_attr = 0 " 0 - lowercase; 1 - Capital; 2 - uppercase
 
     if toupper(cur_word)==#cur_word
@@ -143,13 +159,14 @@ function! s:ToggleWord()
             endif
 
             " use the new word to replace the old word
-            exec "norm ciw" . new_word . ""
+            exec "norm gvc" . new_word . ""
             break
         endif
     endfor
 endfunction
 
-command! ToggleWord :call <SID>ToggleWord()
+nnoremap tt :set operatorfunc=ToggleMotion<CR>g@
+vnoremap tt :<C-u>call ToggleMotion(visualmode())<CR>gv
 
 let &cpo= s:keepcpo
 unlet s:keepcpo
